@@ -3,11 +3,13 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class TerminalNode:
     def __init__(self, terminal_id: int, coordinate: tuple[int, int], airflow: int = None):
         self.terminal_id = terminal_id
         self.coordinate = coordinate
         self.airflow: int = airflow
+
 
 class DuctNode:
     def __init__(self, node_id: int, coordinate: tuple[int, int]):
@@ -24,6 +26,7 @@ class DuctNode:
             (dx, dy) for dx, dy in directions
             if (self.coordinate[0] + dx, self.coordinate[1] + dy) not in duct_system_geometry
         ]
+
 
 class DuctMain:
     def __init__(self, geometry: list[DuctNode]):
@@ -47,7 +50,7 @@ class DuctMain:
         vector = []
         coord = self.geometry[node].coordinate
         all_coords = [x.coordinate for x in self.geometry]
-        directions=[(1,0), (-1,0), (0,1), (0,-1)]
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
         """
         check which direction (up down left right) does not have other main ducts        
         (1,0) for open left
@@ -57,13 +60,15 @@ class DuctMain:
         """
 
         for dx, dy in directions:
-            neighbor = (coord[0]+dx, coord[1]+dy)
+            neighbor = (coord[0] + dx, coord[1] + dy)
             if neighbor not in all_coords:
                 vector.append((dx, dy))
 
         return vector
 
+
 class DuctBranch:
+
     def __init__(self, geometry: list[DuctNode]):
         self.geometry = geometry
         self.length = self.calculate_length()
@@ -83,6 +88,7 @@ class DuctBranch:
             length += abs(current_node[0] - previous_node[0]) + abs(current_node[1] - previous_node[1])
         return length
 
+
 class DuctSystem:
     def __init__(self, terminals: list[TerminalNode], main_duct: DuctMain):
 
@@ -91,17 +97,16 @@ class DuctSystem:
         self.main_duct_nodes: list[DuctNode] = main_duct.geometry
         self.branches: list[DuctBranch] = []
 
-
     def generate_connection(self, current_state):
 
         new_state = current_state.copy()
         new_terminal, new_terminal_coordinates = random.choice(self.terminal_locations)
-        connect_to_node = random.choice(self.main_duct.unattached_nodes())
+        connect_to_node: DuctNode = random.choice(self.main_duct.unattached_nodes())
         new_path = self.generate_path_to_terminal(connect_to_node, new_terminal)
-        new_branch = self.generate_branch_from_path(new_path, connect_to_node)
+        new_branch = self.generate_branch_from_path(new_path)
 
-
-    def generate_path_to_terminal(self, starting_node: DuctNode, objective_terminal: TerminalNode) -> list[tuple[int, int]]:
+    def generate_path_to_terminal(self, starting_node: DuctNode, objective_terminal: TerminalNode) -> list[
+        tuple[int, int]]:
         """
         Generates a valid path from the starting node to the terminal node.
         Constrained to 90-degree turns.
@@ -168,21 +173,13 @@ class DuctSystem:
         # Create and return the DuctBranch object
         return DuctBranch(geometry=duct_nodes)
 
-
-    def is_connected_to_main_branch(self):
-        #  why do i need this again?
-        pass
-
     def evaluate_branch(self, proposed_branch: DuctBranch):
         """
         TODO check for overlap on main duct
         TODO check for overlap on terminals that are not objective
         TODO check for overlap on other ducts that are already in self
-
-        :param proposed_branch:
-        :return:
         """
-        current_branches = self.branches #  list of current branches commited (should NOT have collision errors within set)
+        current_branches = self.branches  #  list of current branches commited (should NOT have collision errors within set)
         branch_check: bool = True
         proposed_coords = [x.coordinate for x in proposed_branch.geometry]
 
@@ -308,9 +305,3 @@ class SimulatedAnnealing:
             self.temperature *= self.alpha
 
         return self.current_state  # Return the best found state
-
-
-
-
-
-

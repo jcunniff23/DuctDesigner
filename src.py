@@ -7,8 +7,6 @@ def parametric_terminals(geometry, throw, density):
 
     terminals = pd.DataFrame()
 
-
-
     return terminals
 
 class SystemBalancer:
