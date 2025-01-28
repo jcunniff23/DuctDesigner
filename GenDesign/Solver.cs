@@ -2,6 +2,14 @@ namespace GenDesign;
 
 public class Solver
 {
- // Class for implementing simulated annealing on top of A* 
- 
+    // Genetic Algorithm for solving duct routing
+
+    enum Angles : int
+    { 
+    }
+
+    
+    
+    
+    
 }

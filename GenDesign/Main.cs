@@ -6,4 +6,8 @@ namespace GenDesign;
 public class Main
 {
     // This class will be responsible for running and visualizing the pathfinding. starting with a 2D text output and stepping up to 3D via some package eventually.
+    static void Entry()
+    {
+        
+    }
 }
