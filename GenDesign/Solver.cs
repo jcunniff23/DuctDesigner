@@ -6,24 +6,37 @@ public class Solver
 {
     private int _generations = 0;
     private int _maximumGenerations;
+    private readonly Point startPoint;
+    private readonly Point endPoint;
+    public enum RouteMode 
+    {
+        OneToOne,
+        OneToMany,
+        ManyToMany
+    }
     
     // Genetic Algorithm for solving duct routing
-    private enum ValidDegreeAngles
-    {
-        _45 = 45, 
-        _90 = 90
-    }
-
     // starting with a 1-to-1 case
-    public Solver(Point start, Point objective, int initialPopulation, int maximumGenerations)
+    public Solver(Point start, Point objective, int initialPopulation, int maximumGenerations, RouteMode mode)
     {
         _maximumGenerations = maximumGenerations;
+        startPoint = start;
+        endPoint = objective;
     }
     
     
     private void FitnessTest()
     {
-        
+        /*
+            Fitness will be a function of:
+                turns (pressure drop associated)
+                distance
+                area obstructed (obstacles collision)
+                    -> need to give ducts an "area" until sizing can be implemented automatically
+
+                
+
+        */
     }
     private void Crossover()
     {
@@ -40,7 +53,7 @@ public class Solver
          */
     }
 
-    private bool ValidatePath()
+    private bool ValidatePath(DuctPath path)
     {
         /*  Test whether the path:
          *      is continuous from start point to target
@@ -50,7 +63,16 @@ public class Solver
          *  validate path will not do scoring, only check for issues that would
          *  ruin future generations
          */
-        return false;
+
+        bool checkPath = false;
+
+        foreach (DuctSegment segment in path.DuctSegments) 
+        {
+
+        }
+
+
+        return checkPath;
     }
 
     private void RegeneratePath()
@@ -64,16 +86,20 @@ public class Solver
         
     }
 
-    private void InitializeRandomRoute()
+    private void InitializeRandomRoute(Point start, Point end)
     {
+        /*  TODO: random route needs to have decision making for how far each vector should travel ()
+         *        initial random routes should be spread across the solution space (2d or 3d) so that the liklihood of being
+         *        near the optimal solution is greater
+         */
         
     }
 
     private void EncodePathToGenes()
     {
         /*
-         *  Change data representation to be mutation/evolution
-         *  friendly vectors?? 
+         *  Change data representation to be mutation/evolution friendly vectors?? 
+         *  
          */
     }
     
@@ -86,13 +112,20 @@ public class Solver
              * 
              */
         
+
         while (_generations < _maximumGenerations)
         {
-            _generations++;
-            List<DuctPath> currentPopulationSet = new List<DuctPath>();
+            List<DuctPath> currentPopulationSet = new List<DuctPath>(); //  newest evolution set, populate based on parents, or initial route on first gen
             
+            if (_generations == 0)
+            {
+                // populate using InitializeRandomRoute()
+                InitializeRandomRoute(startPoint, endPoint);
+
+            }
 
 
+            _generations++;
         } 
         
     }
