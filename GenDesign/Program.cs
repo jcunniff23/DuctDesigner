@@ -12,6 +12,20 @@ public class Program
         // choose start & target points
         // create solver class
         // draw with solver results
+        
+        Point start = new Point(0, 0);
+        Point end = new Point(10, 10);
+
+        Solver solver = new Solver(start, end, 10, 10, Solver.RouteMode.OneToOne, 8);
+        DuctPath path = solver.InitializeRandomRoute(start, end);
+
+        foreach (DuctSegment segment in path.DuctSegments)
+        {
+            Console.WriteLine($"({segment.Points[0].X}, {segment.Points[0].Y})");
+            Console.WriteLine($"({segment.Points[1].X}, {segment.Points[1].Y})");
+            Console.WriteLine("-----------------");
+        }
+        
     }
 
     private static void DrawPath(DuctPath path)
