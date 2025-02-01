@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace GenDesign;
 
 public class DuctSegment
@@ -11,10 +13,13 @@ public class DuctSegment
     public double? Diameter { get; set; } //TODO figure out a way to check that Diameter OR Width/Height are set exclusively
     public double? Width { get; set; }
     public double? Height { get; set; }
-
+    public Vector2 Vector { get; init; }
+    
     public DuctSegment(Point start, Point end)
     {
         Points = new List<Point> { start, end };
-    }    
+        Vector = new Vector2((float)(end.X - start.X), (float)(end.Y - start.Y));
+    } 
     
+        
 }

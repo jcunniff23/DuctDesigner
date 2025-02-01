@@ -16,8 +16,8 @@ public class Program
         Point start = new Point(0, 0);
         Point end = new Point(10, 10);
 
-        Solver solver = new Solver(start, end, 10, 10, Solver.RouteMode.OneToOne, 8);
-        DuctPath path = solver.InitializeRandomRoute(start, end);
+        GeneticEvolution geneticEvolution = new GeneticEvolution(start, end, 10, 10, GeneticEvolution.RouteMode.OneToOne, 8);
+        DuctPath path = geneticEvolution.InitializeRandomRoute(start, end);
 
         foreach (DuctSegment segment in path.DuctSegments)
         {
