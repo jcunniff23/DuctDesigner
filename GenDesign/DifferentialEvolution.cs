@@ -40,15 +40,15 @@ public class DifferentialEvolution
         int populationSize = _initialPopulation;
 
         //Initialize routes based on desired size from solver constructor
-        List<DuctPath> paths = Enumerable.Range(0, populationSize)
+        List<PathIndividual> paths = Enumerable.Range(0, populationSize)
             .Select(_ => InitializeRandomRoute(startPoint, endPoint)).ToList();
 
         int generationCount = 0;
         while (generationCount < _maximumGenerations)
         {
-            foreach (DuctPath individual in paths)
+            foreach (PathIndividual individual in paths)
             {
-                foreach (DuctSegment segment in individual.DuctSegments)
+                foreach (DuctSegment segment in individual.Segments)
                 {
                     var mutantVector = MutantVector(differentialWeight, paths);
                     var trialVector = DifferentialCrossover(mutantVector, segment.Vector, crossoverProbability);
@@ -58,16 +58,16 @@ public class DifferentialEvolution
         }
     }
 
-    private Vector2 MutantVector(double differentialWeight, List<DuctPath> paths)
+    private Vector2 MutantVector(double differentialWeight, List<PathIndividual> paths)
     {
         //choose 3 random segment vectors, 
         //combine segment vectors and return mutated segment
 
         List<DuctSegment> segments = new List<DuctSegment>();
 
-        foreach (DuctPath path in paths)
+        foreach (PathIndividual path in paths)
         {
-            segments.AddRange(path.DuctSegments);
+            segments.AddRange(path.Segments);
         }
 
         Random random = new Random();
@@ -145,7 +145,7 @@ public class DifferentialEvolution
         return Math.Sqrt((pointA.X - pointB.X) * (pointA.X - pointB.X) + (pointA.Y - pointB.Y) * (pointA.Y - pointB.Y));
     }
     
-    public DuctPath InitializeRandomRoute(Point start, Point end)
+    public PathIndividual InitializeRandomRoute(Point start, Point end)
     {
         /*  TODO: random route needs to have decision making for how far each vector should travel ()
          *        initial random routes should be spread across the solution space (2d or 3d) so that the likelihood of being
@@ -163,7 +163,7 @@ public class DifferentialEvolution
             turnCounter++;
             Point mostRecentPoint;
             if (segments.Count != 0)
-                mostRecentPoint = segments.Last().Points[1];
+                mostRecentPoint = segments.Last().EndPoint;
             else
                 mostRecentPoint = start;
 
@@ -187,8 +187,9 @@ public class DifferentialEvolution
             segments.Add(nextSegment);
         }
 
-        DuctPath path = new DuctPath(segments);
-        return path;
+        var waypoints = new List<WaypointGene>();
+        PathIndividual pathIndividual = new PathIndividual(startPoint, endPoint, waypoints);
+        return pathIndividual;
     }
     
     

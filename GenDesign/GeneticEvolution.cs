@@ -1,5 +1,9 @@
 using System.Numerics;
 using System.Security.Cryptography;
+using CsvHelper;
+using CsvHelper.Configuration.Attributes;
+using System.Globalization;
+using System.Runtime.InteropServices.JavaScript;
 
 namespace GenDesign;
 
@@ -9,8 +13,14 @@ public class GeneticEvolution
     private int _maximumGenerations;
     private readonly Point startPoint;
     private readonly Point endPoint;
-    private int _maximumTurns;
-    private int _initialPopulation;
+    private int _waypoints;
+    private int _populationSize;
+    private Random _random;
+    private List<PathIndividual> _population = new List<PathIndividual>();
+
+    private double _mutationPerterbRate; // F
+    private double _mutationRefreshRate;
+    private double _crossoverRate; // CR
 
     public enum RouteMode
     {
@@ -21,20 +31,55 @@ public class GeneticEvolution
 
     // Genetic Algorithm for solving duct routing
     // starting with a 1-to-1 case
-    public GeneticEvolution(Point start, Point objective, int initialPopulation, int maximumGenerations, RouteMode mode,
-        int maximumTurns)
+    public GeneticEvolution(Point start, Point objective, int populationSize,int waypoints, int maximumGenerations, RouteMode mode, double mutationPerterbRate, double crossoverRate)
     {
         _maximumGenerations = maximumGenerations;
         startPoint = start;
         endPoint = objective;
-        _maximumTurns = maximumTurns;
-        _initialPopulation = initialPopulation;
+        _waypoints = waypoints; 
+        _populationSize = populationSize;
+        _mutationPerterbRate = mutationPerterbRate;
+        _mutationRefreshRate = mutationPerterbRate*0.5;
+        _crossoverRate = crossoverRate;
+        _population = new List<PathIndividual>();
+        _random = new Random();
     }
 
-    private double FitnessPressureDrop(DuctPath path)
+    private double FitnessSimple(PathIndividual individual)
     {
         // GOAL: MINIMIZE Pdrop
-        double C0_duct = 0.15; // per unit lenght
+        double lengthCoeff = 0.15; // per unit length
+        double deg45Coeff = 1.75; // per instance
+        double def90Coeff = 2.25; // per instance
+        double openSolutionPenalty = 1; // per unit length
+        
+        
+        double fitness = 0;
+        fitness += individual.Segments.Sum(_ => _.Length) * lengthCoeff;
+
+        for (int i = 1; i < individual.Segments.Count; i++)
+        {
+            double angle = CalculateTurnAngle(individual.Segments[i-1], individual.Segments[i]);
+            fitness += angle switch
+            {
+                0 => 0,
+                45 => deg45Coeff,
+                90 => def90Coeff,
+                _ => 50
+            };
+        }
+        
+        Point individualEnd = individual.Segments.Last().EndPoint;
+        double endError = GetDistance(endPoint, individualEnd);
+        fitness += endError * openSolutionPenalty;
+
+        return fitness;
+    }
+    
+    private double FitnessPressureDropOnly(PathIndividual pathIndividual)
+    {
+        // GOAL: MINIMIZE Pdrop
+        double C0_duct = 0.15; // per unit length
         double C0_45degFitting = 0.75; // per instance
         double C0_90degFitting = 1.25; // per instance
         double totalLength = 0.0;
@@ -43,17 +88,17 @@ public class GeneticEvolution
         int fittings90deg = 0;
 
         // find instance of each turn & find all lengths
-        for (int i = 0; i < path.DuctSegments.Count; i++)
+        for (int i = 0; i < pathIndividual.Segments.Count; i++)
         {
-            DuctSegment thisSegment = path.DuctSegments[i];
+            DuctSegment thisSegment = pathIndividual.Segments[i];
 
             // if there are no nextSegments, break for loop
-            if (i == path.DuctSegments.Count - 1)
+            if (i == pathIndividual.Segments.Count - 1)
             {
                 break;
             }
 
-            DuctSegment nextSegment = path.DuctSegments[i + 1];
+            DuctSegment nextSegment = pathIndividual.Segments[i + 1];
             totalLength += (double)thisSegment.Vector.Length();
 
             var theta = Math.Acos(Vector2.Dot(thisSegment.Vector, nextSegment.Vector) /
@@ -80,36 +125,45 @@ public class GeneticEvolution
         return (C0_duct * totalLength + C0_45degFitting * fittings45deg + C0_90degFitting * fittings90deg);
     }
 
-    private double FitnessFootprint(DuctPath path)
+    private double FitnessFootprint(PathIndividual individual)
     {
-        // GOAL: MINIMIZE Footprint/Area
-        return 0.0;
+        // GOAL: MINIMIZE weighted sum of centroids distance from start
+        double distancePenalty = 1;
+        double openSolutionPenalty = 0.1;
+        double fitness = 0;
+        fitness += individual.Segments.Sum(_ => GetDistance(_.CenterPoint, endPoint)) * distancePenalty;
+        
+        Point individualEnd = individual.Segments.Last().EndPoint;
+        double endError = GetDistance(endPoint, individualEnd);
+        fitness += endError * openSolutionPenalty;
+
+        return fitness;
     }
 
-    private double FitnessCost(DuctPath path)
+    private double FitnessCost(PathIndividual pathIndividual)
     {
         // GOAL: MINIMIZE Cost (Length/fittings)
         return 0.0;
     }
 
-    private List<DuctPath> EqualizeGenomes(List<DuctPath> paths)
+    private List<PathIndividual> EqualizeGenomes(List<PathIndividual> paths)
     {
-        DuctPath longestPath = paths[0];
-        foreach (DuctPath path in paths)
+        PathIndividual longestPathIndividual = paths[0];
+        foreach (PathIndividual path in paths)
         {
-            if (path.DuctSegments.Count > longestPath.DuctSegments.Count)
+            if (path.Segments.Count > longestPathIndividual.Segments.Count)
             {
-                longestPath = path;
+                longestPathIndividual = path;
             }
         }
 
-        paths.Remove(longestPath);
+        paths.Remove(longestPathIndividual);
 
-        foreach (DuctPath path in paths)
+        foreach (PathIndividual path in paths)
         {
             // Randomly? segment path until path.DuctSegments.count == longest
 
-            while (path.DuctSegments.Count < longestPath.DuctSegments.Count)
+            while (path.Segments.Count < longestPathIndividual.Segments.Count)
             {
                 // split random gene until satisifed       
             }
@@ -117,33 +171,67 @@ public class GeneticEvolution
 
         return paths;
     }
-
-    private List<DuctPath> SingleCrossover(DuctPath parent1, DuctPath parent2)
+    
+    private List<PathIndividual> SelectParents(List<double> fitnessScores)
     {
-        Random random = new Random();
-        int parent1Index = random.Next(parent1.DuctSegments.Count);
-
-        return new List<DuctPath>(); //temp for error 
+        var parents = new List<PathIndividual>();
+        for (int i = 0; i < _populationSize; i++)
+        {
+            // sample 2 individuals and choose the better one
+            int index1 = _random.Next(_populationSize);
+            int index2 = _random.Next(_populationSize);
+            var parent = fitnessScores[index1] < fitnessScores[index2]
+                ? _population[index1]
+                : _population[index2];
+            parents.Add(parent);
+        }
+        return parents;
     }
 
-    private List<DuctPath> DoubleCrossover(DuctPath parent1, DuctPath parent2)
+    private PathIndividual Elitism(List<PathIndividual> paths, Func<PathIndividual, double> fitnessFunction)
     {
-        Random random = new Random();
-        
-        return new List<DuctPath>(); //temp for error 
+        List<PathIndividual> sortedPaths = paths.OrderBy(fitnessFunction).ToList();
+        PathIndividual bestPath = sortedPaths.First();
+        return bestPath;
+    }
+    
+    private PathIndividual SingleCrossover(PathIndividual parent1, PathIndividual parent2)
+    {
+        var childWaypoints = new List<WaypointGene>();
+
+        int crossoverPoint = _random.Next(1, Math.Min(parent1.Waypoints.Count, parent2.Waypoints.Count));
+        childWaypoints.AddRange(parent1.Waypoints.Take(crossoverPoint));
+        childWaypoints.AddRange(parent2.Waypoints.Skip(crossoverPoint));
+
+        return new PathIndividual(startPoint, endPoint, childWaypoints);
     }
 
-    private void Mutate()
+    
+    private void Mutate(PathIndividual individual)
     {
-        /*  Mutations that are valid:
-         *      deletion,
-         *      insertion (how to choose new vector?)
-         *      substitutions (swapping),
-         *
-         */
+
+        var diceRoll = _random.NextDouble();
+        if (diceRoll < (_mutationRefreshRate + _mutationPerterbRate) && diceRoll > _mutationPerterbRate)
+        {
+            var waypoints = GenerateRandomWaypoints();
+            individual = new PathIndividual(startPoint, endPoint, waypoints);
+        } 
+        else if (diceRoll < _mutationPerterbRate)
+        {
+            //TODO adjust mutation step size
+            var dist = GetDistance(startPoint, endPoint);
+            foreach (var waypoint in individual.Waypoints)
+            {
+                // Perturb position
+                waypoint.Position = new Point(
+                    waypoint.Position.X + _random.NextDouble() * dist / individual.Waypoints.Count,
+                    waypoint.Position.Y + _random.NextDouble() * dist / individual.Waypoints.Count
+                );
+            }
+        }
     }
 
-    private bool ValidatePath(DuctPath path)
+    private bool ValidatePath(PathIndividual pathIndividual)
     {
         /*  Test whether the path:
          *      is continuous from start point to target
@@ -156,7 +244,7 @@ public class GeneticEvolution
 
         bool checkPath = false;
 
-        foreach (DuctSegment segment in path.DuctSegments)
+        foreach (DuctSegment segment in pathIndividual.Segments)
         {
         }
 
@@ -164,7 +252,7 @@ public class GeneticEvolution
         return checkPath;
     }
 
-    private void RegeneratePath(DuctPath path)
+    private void RegeneratePath(PathIndividual individual)
     {
         /*  To regenerate the path (after a broken mutation)
          *  the idea will be to take the remaining vector from
@@ -183,94 +271,158 @@ public class GeneticEvolution
          *
          */
 
-        DuctSegment newSegment = new DuctSegment(path.DuctSegments.Last().Points[1], endPoint);
-        path.DuctSegments.Add(newSegment);
-    }
-
-    private double IncompletePathPenalty(DuctPath path)
-    {
-        int penaltyMultiplier = 10; // TODO tune this parameter for broken paths
-        DuctSegment? finalSegment;
-        if (path.DuctSegments.Count == 0)
-            return penaltyMultiplier * GetDistance(startPoint, endPoint);
-        else
-            finalSegment = path.DuctSegments.Last();
-
-        return penaltyMultiplier * GetDistance(finalSegment.Points[1], endPoint);
-    }
-
-    public DuctPath InitializeRandomRoute(Point start, Point end)
-    {
-        /*  TODO: random route needs to have decision making for how far each vector should travel ()
-         *        initial random routes should be spread across the solution space (2d or 3d) so that the likelihood of being
-         *        near the optimal solution is greater
-         */
-        Random random = new Random();
-        List<DuctSegment> segments = new List<DuctSegment>();
-        int randomTurnCount = random.Next(1, _maximumTurns + 1); // random # of turns between 1 and max
-        int turnCounter = 0;
-        double fullDist = GetDistance(start, end);
-
-        // Loop through and create new duct segments until condition completed
-        while (turnCounter < randomTurnCount)
+        
+        //Angle check
+        //TODO implement open distance vector repair
+        for (int i = 1; i < individual.Segments.Count; i++)
         {
-            turnCounter++;
-            Point mostRecentPoint;
-            if (segments.Count != 0)
-                mostRecentPoint = segments.Last().Points[1];
-            else
-                mostRecentPoint = start;
+            var prev = individual.Segments[i - 1];
+            var curr = individual.Segments[i];
 
-            if (GetDistance(mostRecentPoint, end) < fullDist * 0.05)
+            if (!IsValidTurn(prev, curr))
             {
-                // If the most recent segment is within 5% of the total distance to the target, close the path
-                mostRecentPoint = new Point(end.X, end.Y);
-                break;
+                // Adjust current segment to nearest valid angle
+                double angle = CalculateTurnAngle(prev, curr);
+                double snappedAngle = SnapAngle(angle);
+                Vector2 newDir = RotateVector(prev.Vector, snappedAngle);
+
+                // Update waypoint position
+                individual.Waypoints[i - 1].Position = new Point(
+                    prev.StartPoint.X + newDir.X,
+                    prev.StartPoint.Y + newDir.Y
+                );
             }
-
-            if (turnCounter == randomTurnCount)
-            {
-                // On final segment, reach the objective to complete path
-                DuctSegment finalSegment = new DuctSegment(mostRecentPoint, end);
-                segments.Add(finalSegment);
-                break;
-            }
+        }
+    }
 
 
-            DuctSegment nextSegment = new DuctSegment(mostRecentPoint, RandomNextPoint(mostRecentPoint, end));
-            segments.Add(nextSegment);
+    //Utility functions, move to separate class eventually
+    //TODO refactor util functiions
+    
+    private Vector2 RotateVector(Vector2 vector, double angle)
+    {
+        float newX = (float)(vector.X * Math.Cos(angle) - vector.Y * Math.Sin(angle));
+        float newY = (float)(vector.X * Math.Sin(angle) + vector.Y * Math.Cos(angle));
+        
+        return new Vector2(newX, newY);
+    }
+    
+    private double CalculateTurnAngle(DuctSegment prev, DuctSegment curr)
+    {
+        Vector2 prevDir = prev.Vector;
+        Vector2 currDir = curr.Vector;
+        return Math.Acos(Vector2.Dot(prevDir, currDir) / (prevDir.Length() * currDir.Length())) * (180 / Math.PI);
+    }
+
+    private double SnapAngle(double angle)
+    {
+        return Math.Round(angle / 45) * 45;
+    }
+
+    private bool IsValidTurn(DuctSegment prev, DuctSegment curr)
+    {
+        double angle = CalculateTurnAngle(prev, curr);
+        return angle % 45 == 0 && angle <= 90;
+    }
+
+    private void InitializePopulation()
+    {
+        for (int i = 0; i < _populationSize; i++)
+        {
+            var waypoints = GenerateRandomWaypoints();
+            var ind = new PathIndividual(startPoint, endPoint, waypoints);
+            ind.GenerationNumber = 0;
+            _population.Add(ind);
+        }
+    }
+
+    private List<WaypointGene> GenerateRandomWaypoints()
+    {
+        // int numWaypoints = _random.Next(1, _maxWaypoints + 1); // random # of turns between 1 and max
+        int numWaypoints = _waypoints; // set number of turns by hyperparameter
+        int counter = 0;
+        List<WaypointGene> waypoints = new List<WaypointGene>();
+        
+        double dist = GetDistance(startPoint, endPoint);
+        
+        Point current = startPoint; // initialize search point with start point
+        // Loop through and create new duct segments until condition completed
+        while (counter < numWaypoints)
+        {
+            counter++;
+            // Generate a new waypoint with 45° or 90° turns
+            double angle = _random.Next(0, 4) * 45 * (Math.PI / 180); // snap to a 45 deg up to 135deg
+            double length = _random.NextDouble() * (dist/ (_waypoints/2)); // search length with fudge factor for dynamic search distance?
+            Point next = new Point(
+                current.X + length * Math.Cos(angle),
+                current.Y + length * Math.Sin(angle)
+            );      //create waypoint based on current pos and ping with random value using distance
+
+            // waypoints.Add(new WaypointGene { Position = next, IsActive = true });
+            waypoints.Add(new WaypointGene { Position = next});
+            current = next;
         }
 
-        DuctPath path = new DuctPath(segments);
-        return path;
+        return waypoints;
     }
+    
 
-    private void Evolution()
+    public PathIndividual Evolution()
     {
-        /*
-         *
-         *
-         *
-         *
-         */
-
-        // TODO Create better stop conditions
+        InitializePopulation();
+        List<PathIndividual> wholeFamily = new List<PathIndividual>();
+        
+        // TODO Create better stop conditions --> if improvement does not continue or something goes wrong (try catch?)
         while (_generations < _maximumGenerations)
         {
-            List<DuctPath>
-                currentPopulationSet =
-                    new List<DuctPath>(); //  newest evolution set, populate based on parents, or initial route on first gen
-
-            if (_generations == 0)
+            /*Each evolution will:
+             * 1. evaluate population
+             * 2. retain the best path (elitism)
+             * 3. select parents
+             * 4. reproduce/crossover for children
+             * 5. mutate (skip elite genome) 
+             */
+            
+            
+            
+            _generations++;
+            int currentGen = _generations - 1;
+            var fitness = _population.Select(FitnessSimple).ToList();
+            var elite = Elitism(_population, FitnessSimple);
+            _population.Remove(elite);
+            var parents = _population;
+            
+            var children = new List<PathIndividual>();
+            while (children.Count < _populationSize)
             {
-                // populate using InitializeRandomRoute()
-                InitializeRandomRoute(startPoint, endPoint);
+                var parent1 = parents[_random.Next(parents.Count)];
+                var parent2 = parents[_random.Next(parents.Count)];
+                var child = SingleCrossover(parent1, parent2);
+                Mutate(child);
+                // RegeneratePath(child);
+                child.GenerationNumber = currentGen;
+                child.Fitness = FitnessSimple(child);
+                children.Add(child);
+
             }
 
+            children.Add(elite);
+            _population = children;
+            wholeFamily.AddRange(_population); // add newly created generation to whole family so it can be dumped to csv later
 
-            _generations++;
         }
+
+        using (var writer = new StreamWriter($"../../../assets/GenerticEvolution_{DateTime.Today:yyyyMMdd}-1.csv"))
+        using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csv.Context.RegisterClassMap<PathMap>();
+            csv.WriteRecords(wholeFamily);
+        }
+            
+            
+        return _population.OrderBy(FitnessSimple).First(); // return best 
     }
+
 
 
     private int RandomAngle()
