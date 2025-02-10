@@ -21,17 +21,11 @@ public class GeneticEvolution
     private double _mutationPerterbRate; // F
     private double _mutationRefreshRate;
     private double _crossoverRate; // CR
-
-    public enum RouteMode
-    {
-        OneToOne,
-        OneToMany,
-        ManyToMany
-    }
+    
 
     // Genetic Algorithm for solving duct routing
     // starting with a 1-to-1 case
-    public GeneticEvolution(Point start, Point objective, int populationSize,int waypoints, int maximumGenerations, RouteMode mode, double mutationPerterbRate, double crossoverRate)
+    public GeneticEvolution(Point start, Point objective, int populationSize,int waypoints, int maximumGenerations, double mutationPerterbRate, double crossoverRate)
     {
         _maximumGenerations = maximumGenerations;
         startPoint = start;
@@ -51,7 +45,6 @@ public class GeneticEvolution
         double lengthCoeff = 0.15; // per unit length
         double deg45Coeff = 1.75; // per instance
         double def90Coeff = 2.25; // per instance
-        double openSolutionPenalty = 1; // per unit length
         
         
         double fitness = 0;
@@ -68,15 +61,10 @@ public class GeneticEvolution
                 _ => 50
             };
         }
-        
-        Point individualEnd = individual.Segments.Last().EndPoint;
-        double endError = GetDistance(endPoint, individualEnd);
-        fitness += endError * openSolutionPenalty;
-
         return fitness;
     }
     
-    private double FitnessPressureDropOnly(PathIndividual pathIndividual)
+    private double FitnessPressureDrop(PathIndividual pathIndividual)
     {
         // GOAL: MINIMIZE Pdrop
         double C0_duct = 0.15; // per unit length
@@ -128,14 +116,11 @@ public class GeneticEvolution
     private double FitnessFootprint(PathIndividual individual)
     {
         // GOAL: MINIMIZE weighted sum of centroids distance from start
-        double distancePenalty = 1;
-        double openSolutionPenalty = 0.1;
         double fitness = 0;
-        fitness += individual.Segments.Sum(_ => GetDistance(_.CenterPoint, endPoint)) * distancePenalty;
+        double distancePenalty = 1; // per unit distance
+        Point SolutionAreaCenter = new Point((startPoint.X + endPoint.X)*0.5, (startPoint.Y + endPoint.Y)*0.5);
         
-        Point individualEnd = individual.Segments.Last().EndPoint;
-        double endError = GetDistance(endPoint, individualEnd);
-        fitness += endError * openSolutionPenalty;
+        fitness += individual.Segments.Sum(_ => GetDistance(_.CenterPoint, SolutionAreaCenter)) * distancePenalty;
 
         return fitness;
     }
@@ -145,6 +130,19 @@ public class GeneticEvolution
         // GOAL: MINIMIZE Cost (Length/fittings)
         return 0.0;
     }
+    
+    private double FitnessError(PathIndividual individual)
+    {
+        
+        double fitness = 0;
+        double openSolutionPenalty = 10; // per unit length
+        Point individualEnd = individual.Segments.Last().EndPoint;
+        double endError = GetDistance(endPoint, individualEnd);
+        fitness += endError * openSolutionPenalty;
+        
+        return fitness;
+    }
+    
 
     private List<PathIndividual> EqualizeGenomes(List<PathIndividual> paths)
     {
@@ -190,24 +188,36 @@ public class GeneticEvolution
 
     private PathIndividual Elitism(List<PathIndividual> paths, Func<PathIndividual, double> fitnessFunction)
     {
+        // Preserve the best solution
         List<PathIndividual> sortedPaths = paths.OrderBy(fitnessFunction).ToList();
         PathIndividual bestPath = sortedPaths.First();
         return bestPath;
     }
     
+    
     private PathIndividual SingleCrossover(PathIndividual parent1, PathIndividual parent2)
     {
         var childWaypoints = new List<WaypointGene>();
-
         int crossoverPoint = _random.Next(1, Math.Min(parent1.Waypoints.Count, parent2.Waypoints.Count));
         childWaypoints.AddRange(parent1.Waypoints.Take(crossoverPoint));
         childWaypoints.AddRange(parent2.Waypoints.Skip(crossoverPoint));
+        var newPath = new PathIndividual(startPoint, endPoint, childWaypoints);
+        newPath.Fitness = FitnessSimple(newPath);
+        var mostFitParent = parent1.Fitness <= parent2.Fitness ? parent1 : parent2;
 
-        return new PathIndividual(startPoint, endPoint, childWaypoints);
+        if (newPath.Fitness < mostFitParent.Fitness)
+        {
+            return newPath;
+        }
+        else
+        {
+            return mostFitParent;
+        }
     }
 
-    
-    private void Mutate(PathIndividual individual)
+    private int mutatePerturbCount = 0;
+    private int mutateRefreshCount = 0;
+    private bool Mutate(PathIndividual individual)
     {
 
         var diceRoll = _random.NextDouble();
@@ -215,19 +225,29 @@ public class GeneticEvolution
         {
             var waypoints = GenerateRandomWaypoints();
             individual = new PathIndividual(startPoint, endPoint, waypoints);
+            mutateRefreshCount++;
+            return true;
         } 
         else if (diceRoll < _mutationPerterbRate)
         {
             //TODO adjust mutation step size
-            var dist = GetDistance(startPoint, endPoint);
+            var dist = GetDistance(startPoint, endPoint)*0.25;
             foreach (var waypoint in individual.Waypoints)
             {
                 // Perturb position
                 waypoint.Position = new Point(
-                    waypoint.Position.X + _random.NextDouble() * dist / individual.Waypoints.Count,
-                    waypoint.Position.Y + _random.NextDouble() * dist / individual.Waypoints.Count
+                    waypoint.Position.X + _random.NextDouble() * (dist / individual.Waypoints.Count),
+                    waypoint.Position.Y + _random.NextDouble() * (dist / individual.Waypoints.Count)
                 );
             }
+            
+            RepairPathTurns(individual);
+            mutatePerturbCount++;
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -252,7 +272,7 @@ public class GeneticEvolution
         return checkPath;
     }
 
-    private void RegeneratePath(PathIndividual individual)
+    private void RepairPathTurns(PathIndividual individual)
     {
         /*  To regenerate the path (after a broken mutation)
          *  the idea will be to take the remaining vector from
@@ -266,14 +286,13 @@ public class GeneticEvolution
          */
 
         /*
-         * OR, ignore the incomplete paths for now and add a penalty function that will
+         * OR!? ignore the incomplete paths for now and add a penalty function that will
          * act as a way to guide the solver to connect back the
          *
          */
 
         
         //Angle check
-        //TODO implement open distance vector repair
         for (int i = 1; i < individual.Segments.Count; i++)
         {
             var prev = individual.Segments[i - 1];
@@ -297,7 +316,7 @@ public class GeneticEvolution
 
 
     //Utility functions, move to separate class eventually
-    //TODO refactor util functiions
+    //TODO refactor util functions?
     
     private Vector2 RotateVector(Vector2 vector, double angle)
     {
@@ -370,9 +389,14 @@ public class GeneticEvolution
     public PathIndividual Evolution()
     {
         InitializePopulation();
-        List<PathIndividual> wholeFamily = new List<PathIndividual>();
+        _population.ForEach(_ => _.Fitness = FitnessSimple(_));
+        _population.ForEach(_ => _.FootprintFitness = FitnessFootprint(_));
+        _population.ForEach(_ => _.EndPointFitness = FitnessError(_));
         
-        // TODO Create better stop conditions --> if improvement does not continue or something goes wrong (try catch?)
+        List<PathIndividual> wholeFamily = new List<PathIndividual>();
+        wholeFamily.AddRange(_population);
+        
+        
         while (_generations < _maximumGenerations)
         {
             /*Each evolution will:
@@ -380,45 +404,64 @@ public class GeneticEvolution
              * 2. retain the best path (elitism)
              * 3. select parents
              * 4. reproduce/crossover for children
-             * 5. mutate (skip elite genome) 
+             * 4a. repair child path to snap to feasible angles
+             * 5. mutate (skip elite genome)
+             * 5a. repair child mutation to snap to feasible angles
              */
-            
-            
             
             _generations++;
             int currentGen = _generations - 1;
-            var fitness = _population.Select(FitnessSimple).ToList();
             var elite = Elitism(_population, FitnessSimple);
             _population.Remove(elite);
-            var parents = _population;
             
+            var parents = _population;
             var children = new List<PathIndividual>();
             while (children.Count < _populationSize)
             {
+                // var parentsCross = SelectParents(fitness); //  more intelligent way to select parents?
                 var parent1 = parents[_random.Next(parents.Count)];
                 var parent2 = parents[_random.Next(parents.Count)];
                 var child = SingleCrossover(parent1, parent2);
                 Mutate(child);
-                // RegeneratePath(child);
                 child.GenerationNumber = currentGen;
                 child.Fitness = FitnessSimple(child);
+                child.FootprintFitness = FitnessFootprint(child);
+                child.EndPointFitness = FitnessError(child);
+                
                 children.Add(child);
 
             }
-
+            
+            elite.GenerationNumber = currentGen;
             children.Add(elite);
             _population = children;
             wholeFamily.AddRange(_population); // add newly created generation to whole family so it can be dumped to csv later
 
         }
 
-        using (var writer = new StreamWriter($"../../../assets/GenerticEvolution_{DateTime.Today:yyyyMMdd}-1.csv"))
+        var basePath = "../../../assets/";
+        var baseName = "GeneticEvolution";
+        var date = $"{DateTime.Today:yyyyMMdd}";
+        var fileNum = 0;
+        string filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+
+        while (File.Exists(filePath))
+        {
+            fileNum++;
+            filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+        }
+
+        using (var writer = new StreamWriter($"{filePath}.csv"))
         using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
         {
             csv.Context.RegisterClassMap<PathMap>();
+            wholeFamily = wholeFamily.OrderBy(_ => _.GenerationNumber).ToList(); // enforce sorting hopefully :,(
             csv.WriteRecords(wholeFamily);
         }
-            
+        Console.WriteLine($"Mutation Pertrub Count: {mutatePerturbCount}");
+        Console.WriteLine($"Mutation Refresh Count: {mutateRefreshCount}");
+        Console.WriteLine($"File Saved as '{filePath}'");
+        
             
         return _population.OrderBy(FitnessSimple).First(); // return best 
     }

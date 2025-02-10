@@ -15,6 +15,10 @@ public class PathIndividual
     public Point EndPoint { get; set; }
     public List<WaypointGene> Waypoints { get; set; }
     public double Fitness { get; set; }
+    public double FootprintFitness { get; set; }
+    public double PressureDropFitness { get; set; }
+    public double EndPointFitness { get; set; }
+    public double FitnessCost { get; set; }
     public List<DuctSegment> Segments => CalculateSegmentsFromPoints();
 
     public PathIndividual(Point startPoint, Point endPoint, List<WaypointGene> waypoints)
@@ -45,7 +49,11 @@ public sealed class PathMap : ClassMap<PathIndividual>
     public PathMap()
     {
         Map(m => m.GenerationNumber).Name("Generation");
-        Map(m => m.Fitness).Name("Fitness");
+        Map(m => m.Fitness).Name("Fitness"); //simple fitness function
+        Map(m => m.FootprintFitness).Name("Footprint");
+        // Map(m => m.PressureDropFitness).Name("Pressure_Drop");
+        Map(m => m.EndPointFitness).Name("EndPointError");
+        Map(m => m.FitnessCost).Name("Cost");
         Map(m => m.Waypoints).Name("Waypoints").TypeConverter<WaypointsJsonConverter>();
     }
 }
