@@ -1,3 +1,5 @@
+using System.Globalization;
+using CsvHelper;
 using SkiaSharp;
 
 namespace GenDesign;
@@ -25,10 +27,33 @@ public class Program
             waypoints: 5,
             maximumGenerations: 15,
             mutationPerterbRate: 0.12,
-            crossoverRate: 0.1
+            crossoverRate: 0.5
         );
 
-        var best = geneticEvolution.Evolution();
+        var wholeFamily = geneticEvolution.Evolution();
+        
+        var basePath = "../../../assets/";
+        var baseName = "GeneticEvolution-NoElitism-M012";
+        var date = $"{DateTime.Today:yyyyMMdd}";
+        var fileNum = 0;
+        string filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+
+        while (File.Exists(filePath))
+        {
+            fileNum++;
+            filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+        }
+
+        using (var writer = new StreamWriter($"{filePath}.csv"))
+        using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+        {
+            csv.Context.RegisterClassMap<PathMap>();
+            wholeFamily = wholeFamily.OrderBy(_ => _.GenerationNumber).ToList(); // enforce sorting hopefully :,(
+            csv.WriteRecords(wholeFamily);
+        }
+        Console.WriteLine($"Mutation Pertrub Count: {geneticEvolution.MutatePerturbCount}");
+        Console.WriteLine($"Mutation Refresh Count: {geneticEvolution.MutateRefreshCount}");
+        Console.WriteLine($"File Saved as '{filePath}'");
 
     }
 }

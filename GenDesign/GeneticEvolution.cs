@@ -21,7 +21,9 @@ public class GeneticEvolution
     private double _mutationPerterbRate; // F
     private double _mutationRefreshRate;
     private double _crossoverRate; // CR
-    
+    public int MutatePerturbCount = 0;
+    public int MutateRefreshCount = 0;
+    private readonly Utils _utils;
 
     // Genetic Algorithm for solving duct routing
     // starting with a 1-to-1 case
@@ -37,6 +39,7 @@ public class GeneticEvolution
         _crossoverRate = crossoverRate;
         _population = new List<PathIndividual>();
         _random = new Random();
+        _utils = new Utils();   // refactored utility methods
     }
 
     private double FitnessSimple(PathIndividual individual)
@@ -52,7 +55,7 @@ public class GeneticEvolution
 
         for (int i = 1; i < individual.Segments.Count; i++)
         {
-            double angle = CalculateTurnAngle(individual.Segments[i-1], individual.Segments[i]);
+            double angle = _utils.CalculateTurnAngle(individual.Segments[i-1], individual.Segments[i]);
             fitness += angle switch
             {
                 0 => 0,
@@ -120,7 +123,7 @@ public class GeneticEvolution
         double distancePenalty = 1; // per unit distance
         Point SolutionAreaCenter = new Point((startPoint.X + endPoint.X)*0.5, (startPoint.Y + endPoint.Y)*0.5);
         
-        fitness += individual.Segments.Sum(_ => GetDistance(_.CenterPoint, SolutionAreaCenter)) * distancePenalty;
+        fitness += individual.Segments.Sum(_ => _utils.GetDistance(_.CenterPoint, SolutionAreaCenter)) * distancePenalty;
 
         return fitness;
     }
@@ -137,37 +140,10 @@ public class GeneticEvolution
         double fitness = 0;
         double openSolutionPenalty = 10; // per unit length
         Point individualEnd = individual.Segments.Last().EndPoint;
-        double endError = GetDistance(endPoint, individualEnd);
+        double endError = _utils.GetDistance(endPoint, individualEnd);
         fitness += endError * openSolutionPenalty;
         
         return fitness;
-    }
-    
-
-    private List<PathIndividual> EqualizeGenomes(List<PathIndividual> paths)
-    {
-        PathIndividual longestPathIndividual = paths[0];
-        foreach (PathIndividual path in paths)
-        {
-            if (path.Segments.Count > longestPathIndividual.Segments.Count)
-            {
-                longestPathIndividual = path;
-            }
-        }
-
-        paths.Remove(longestPathIndividual);
-
-        foreach (PathIndividual path in paths)
-        {
-            // Randomly? segment path until path.DuctSegments.count == longest
-
-            while (path.Segments.Count < longestPathIndividual.Segments.Count)
-            {
-                // split random gene until satisifed       
-            }
-        }
-
-        return paths;
     }
     
     private List<PathIndividual> SelectParents(List<double> fitnessScores)
@@ -215,8 +191,6 @@ public class GeneticEvolution
         }
     }
 
-    private int mutatePerturbCount = 0;
-    private int mutateRefreshCount = 0;
     private bool Mutate(PathIndividual individual)
     {
 
@@ -225,51 +199,32 @@ public class GeneticEvolution
         {
             var waypoints = GenerateRandomWaypoints();
             individual = new PathIndividual(startPoint, endPoint, waypoints);
-            mutateRefreshCount++;
+            MutateRefreshCount++;
             return true;
         } 
         else if (diceRoll < _mutationPerterbRate)
         {
             //TODO adjust mutation step size
-            var dist = GetDistance(startPoint, endPoint)*0.25;
+            var dist = _utils.GetDistance(startPoint, endPoint)*0.1;
             foreach (var waypoint in individual.Waypoints)
             {
                 // Perturb position
+                var xDir = _random.Next(0, 2) * 2 - 1;
+                var yDir = _random.Next(0, 2) * 2 - 1;
                 waypoint.Position = new Point(
-                    waypoint.Position.X + _random.NextDouble() * (dist / individual.Waypoints.Count),
-                    waypoint.Position.Y + _random.NextDouble() * (dist / individual.Waypoints.Count)
+                    waypoint.Position.X + xDir * (_random.NextDouble() * (dist / individual.Waypoints.Count)),
+                    waypoint.Position.Y + yDir * (_random.NextDouble() * (dist / individual.Waypoints.Count))
                 );
             }
             
             RepairPathTurns(individual);
-            mutatePerturbCount++;
+            MutatePerturbCount++;
             return true;
         }
         else
         {
             return false;
         }
-    }
-
-    private bool ValidatePath(PathIndividual pathIndividual)
-    {
-        /*  Test whether the path:
-         *      is continuous from start point to target
-         *      has valid turns
-         *      does not collide with obstacles?
-         *
-         *  validate path will not do scoring, only check for issues that would
-         *  ruin future generations
-         */
-
-        bool checkPath = false;
-
-        foreach (DuctSegment segment in pathIndividual.Segments)
-        {
-        }
-
-
-        return checkPath;
     }
 
     private void RepairPathTurns(PathIndividual individual)
@@ -298,14 +253,13 @@ public class GeneticEvolution
             var prev = individual.Segments[i - 1];
             var curr = individual.Segments[i];
 
-            if (!IsValidTurn(prev, curr))
+            if (!_utils.IsValidTurn(prev, curr))
             {
-                // Adjust current segment to nearest valid angle
-                double angle = CalculateTurnAngle(prev, curr);
-                double snappedAngle = SnapAngle(angle);
-                Vector2 newDir = RotateVector(prev.Vector, snappedAngle);
+                // move waypoint to create valid angle -- snap to nearest point
+                double angle = _utils.CalculateTurnAngle(prev, curr);
+                double snappedAngle = _utils.SnapAngle(angle);
+                Vector2 newDir = _utils.RotateVector(prev.Vector, snappedAngle);
 
-                // Update waypoint position
                 individual.Waypoints[i - 1].Position = new Point(
                     prev.StartPoint.X + newDir.X,
                     prev.StartPoint.Y + newDir.Y
@@ -317,32 +271,6 @@ public class GeneticEvolution
 
     //Utility functions, move to separate class eventually
     //TODO refactor util functions?
-    
-    private Vector2 RotateVector(Vector2 vector, double angle)
-    {
-        float newX = (float)(vector.X * Math.Cos(angle) - vector.Y * Math.Sin(angle));
-        float newY = (float)(vector.X * Math.Sin(angle) + vector.Y * Math.Cos(angle));
-        
-        return new Vector2(newX, newY);
-    }
-    
-    private double CalculateTurnAngle(DuctSegment prev, DuctSegment curr)
-    {
-        Vector2 prevDir = prev.Vector;
-        Vector2 currDir = curr.Vector;
-        return Math.Acos(Vector2.Dot(prevDir, currDir) / (prevDir.Length() * currDir.Length())) * (180 / Math.PI);
-    }
-
-    private double SnapAngle(double angle)
-    {
-        return Math.Round(angle / 45) * 45;
-    }
-
-    private bool IsValidTurn(DuctSegment prev, DuctSegment curr)
-    {
-        double angle = CalculateTurnAngle(prev, curr);
-        return angle % 45 == 0 && angle <= 90;
-    }
 
     private void InitializePopulation()
     {
@@ -362,7 +290,7 @@ public class GeneticEvolution
         int counter = 0;
         List<WaypointGene> waypoints = new List<WaypointGene>();
         
-        double dist = GetDistance(startPoint, endPoint);
+        double dist = _utils.GetDistance(startPoint, endPoint);
         
         Point current = startPoint; // initialize search point with start point
         // Loop through and create new duct segments until condition completed
@@ -386,7 +314,7 @@ public class GeneticEvolution
     }
     
 
-    public PathIndividual Evolution()
+    public List<PathIndividual> Evolution()
     {
         InitializePopulation();
         _population.ForEach(_ => _.Fitness = FitnessSimple(_));
@@ -411,8 +339,8 @@ public class GeneticEvolution
             
             _generations++;
             int currentGen = _generations - 1;
-            var elite = Elitism(_population, FitnessSimple);
-            _population.Remove(elite);
+            // var elite = Elitism(_population, FitnessSimple);
+            // _population.Remove(elite);
             
             var parents = _population;
             var children = new List<PathIndividual>();
@@ -432,66 +360,16 @@ public class GeneticEvolution
 
             }
             
-            elite.GenerationNumber = currentGen;
-            children.Add(elite);
+            // elite.GenerationNumber = currentGen;
+            // children.Add(elite);
             _population = children;
             wholeFamily.AddRange(_population); // add newly created generation to whole family so it can be dumped to csv later
 
         }
 
-        var basePath = "../../../assets/";
-        var baseName = "GeneticEvolution";
-        var date = $"{DateTime.Today:yyyyMMdd}";
-        var fileNum = 0;
-        string filePath = $"{basePath}{baseName}_{date}-{fileNum}";
-
-        while (File.Exists(filePath))
-        {
-            fileNum++;
-            filePath = $"{basePath}{baseName}_{date}-{fileNum}";
-        }
-
-        using (var writer = new StreamWriter($"{filePath}.csv"))
-        using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-        {
-            csv.Context.RegisterClassMap<PathMap>();
-            wholeFamily = wholeFamily.OrderBy(_ => _.GenerationNumber).ToList(); // enforce sorting hopefully :,(
-            csv.WriteRecords(wholeFamily);
-        }
-        Console.WriteLine($"Mutation Pertrub Count: {mutatePerturbCount}");
-        Console.WriteLine($"Mutation Refresh Count: {mutateRefreshCount}");
-        Console.WriteLine($"File Saved as '{filePath}'");
-        
-            
-        return _population.OrderBy(FitnessSimple).First(); // return best 
+        return wholeFamily;
     }
 
-
-
-    private int RandomAngle()
-    {
-        // Will randomly return an angle: -90, -45, 0, 45, 90
-
-        Random rand = new Random();
-        int angle;
-        var sign = 1;
-        int random1 = rand.Next(2);
-        int random2 = rand.Next(1);
-
-        if (random1 == 0)
-            angle = 45;
-        else if (random1 == 1)
-            angle = 90;
-        else
-            return 0;
-
-        if (random2 == 0)
-            sign = 1;
-        else
-            sign = -1;
-
-        return sign * angle;
-    }
 
     private Point RandomNextPoint(Point currentPosition, Point targetPosition)
     {
@@ -502,8 +380,8 @@ public class GeneticEvolution
         double randDistance = (double)randInt / 100;
         //ensures that this function will next overshoot the objective point but will never really reach it.
 
-        int randAngle = RandomAngle();
-        double distance = GetDistance(currentPosition, targetPosition);
+        int randAngle = _utils.RandomAngle();
+        double distance = _utils.GetDistance(currentPosition, targetPosition);
 
         if (currentPosition == startPoint)
         {
@@ -520,10 +398,5 @@ public class GeneticEvolution
         Point nextPoint = new Point(newX, newY);
 
         return nextPoint;
-    }
-
-    private double GetDistance(Point pointA, Point pointB)
-    {
-        return Math.Sqrt((pointA.X - pointB.X) * (pointA.X - pointB.X) + (pointA.Y - pointB.Y) * (pointA.Y - pointB.Y));
     }
 }
