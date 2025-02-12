@@ -24,17 +24,17 @@ public class Program
         GeneticEvolution geneticEvolution = new GeneticEvolution(
             start: start,
             objective: end,
-            populationSize: 20,
+            populationSize: 50,
             waypoints: 5,
-            maximumGenerations: 15,
-            mutationPerterbRate: 0.12,
+            maximumGenerations: 100,
+            mutationPerterbRate: 0.30,
             crossoverRate: 0.5
         );
 
         var wholeFamily = geneticEvolution.Evolution();
         
         var basePath = "../../../assets/";
-        var baseName = "GeneticEvolution-NoElitism-M012";
+        var baseName = "GeneticEvolution-NoElitism-M030-P50-G100";
         var date = $"{DateTime.Today:yyyyMMdd}";
         var fileNum = 0;
         string filePath = $"{basePath}{baseName}_{date}-{fileNum}.csv";

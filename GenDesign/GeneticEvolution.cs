@@ -278,8 +278,10 @@ public class GeneticEvolution
         for (int i = 0; i < _populationSize; i++)
         {
             var waypoints = GenerateRandomWaypoints();
-            var ind = new PathIndividual(startPoint, endPoint, waypoints);
-            ind.GenerationNumber = 0;
+            var ind = new PathIndividual(startPoint, endPoint, waypoints)
+            {
+                GenerationNumber = 0
+            };
             _population.Add(ind);
         }
     }
@@ -300,14 +302,14 @@ public class GeneticEvolution
             counter++;
             // Generate a new waypoint with 45° or 90° turns
             double angle = _random.Next(0, 4) * 45 * (Math.PI / 180); // snap to a 45 deg up to 135deg
-            double length = _random.NextDouble() * (dist/ (_waypoints/2)); // search length with fudge factor for dynamic search distance?
+            double length = _random.NextDouble() * (dist/ (_waypoints*0.5)); // search length with fudge factor for dynamic search distance?
             Point next = new Point(
                 current.X + length * Math.Cos(angle),
                 current.Y + length * Math.Sin(angle)
             );      //create waypoint based on current pos and ping with random value using distance
 
             // waypoints.Add(new WaypointGene { Position = next, IsActive = true });
-            waypoints.Add(new WaypointGene { Position = next});
+            waypoints.Add(new WaypointGene(next));
             current = next;
         }
 
@@ -338,8 +340,7 @@ public class GeneticEvolution
              * 5a. repair child mutation to snap to feasible angles
              */
             
-            _generations++;
-            int currentGen = _generations - 1;
+            int currentGen = _generations;
             // var elite = Elitism(_population, FitnessSimple);
             // _population.Remove(elite);
             
@@ -350,7 +351,7 @@ public class GeneticEvolution
                 // var parentsCross = SelectParents(fitness); //  more intelligent way to select parents?
                 var parent1 = parents[_random.Next(parents.Count)];
                 var parent2 = parents[_random.Next(parents.Count)];
-                var child = SingleCrossover(parent1, parent2);
+                var child = new PathIndividual(SingleCrossover(parent1, parent2));
                 Mutate(child);
                 child.GenerationNumber = currentGen;
                 child.Fitness = FitnessSimple(child);
@@ -358,14 +359,15 @@ public class GeneticEvolution
                 child.EndPointFitness = FitnessError(child);
                 
                 children.Add(child);
-
+                Console.WriteLine($"Generation: {_generations} child: {child.Waypoints}");
             }
             
             // elite.GenerationNumber = currentGen;
             // children.Add(elite);
             _population = children;
-            wholeFamily.AddRange(_population); // add newly created generation to whole family so it can be dumped to csv later
-
+            wholeFamily.AddRange(children); // add newly created generation to whole family so it can be dumped to csv later
+            Console.WriteLine($"Generation: {_generations} count = {_population.Count}");
+            _generations++;
         }
 
         return wholeFamily;

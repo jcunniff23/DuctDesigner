@@ -28,6 +28,19 @@ public class PathIndividual
         Waypoints = waypoints;
         
     }
+    
+    // copy constructor 
+    public PathIndividual(PathIndividual other)
+    {
+        GenerationNumber = other.GenerationNumber;
+        Fitness = other.Fitness;
+        FootprintFitness = other.FootprintFitness;
+        EndPointFitness = other.EndPointFitness;
+        StartPoint = other.StartPoint;
+        EndPoint = other.EndPoint;
+        Waypoints = other.Waypoints.Select(w => new WaypointGene(w)).ToList();
+    }
+    
 
     private List<DuctSegment> CalculateSegmentsFromPoints()
     {
