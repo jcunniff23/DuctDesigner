@@ -49,8 +49,8 @@ public class TerminalSolver
             //check if terminal is too close to any other terminal -> penalty
             //check coverage of terminal - reward
         }
-        
-        return fitness
+
+        return fitness;
     }
 
     private List<TerminalGene> InitialSolution()

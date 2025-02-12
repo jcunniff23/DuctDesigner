@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace GenDesign;
+namespace GenDesign.DataStructures;
 
 public class DuctSegment
 {

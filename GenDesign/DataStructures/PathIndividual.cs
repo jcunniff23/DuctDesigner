@@ -3,7 +3,7 @@ using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using Newtonsoft.Json;
 
-namespace GenDesign;
+namespace GenDesign.DataStructures;
 
 public class PathIndividual
 {

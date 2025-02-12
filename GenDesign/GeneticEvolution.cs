@@ -4,6 +4,7 @@ using CsvHelper;
 using CsvHelper.Configuration.Attributes;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
+using GenDesign.DataStructures;
 
 namespace GenDesign;
 

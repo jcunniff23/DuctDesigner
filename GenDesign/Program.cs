@@ -1,5 +1,6 @@
 using System.Globalization;
 using CsvHelper;
+using GenDesign.DataStructures;
 using SkiaSharp;
 
 namespace GenDesign;
@@ -36,22 +37,22 @@ public class Program
         var baseName = "GeneticEvolution-NoElitism-M012";
         var date = $"{DateTime.Today:yyyyMMdd}";
         var fileNum = 0;
-        string filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+        string filePath = $"{basePath}{baseName}_{date}-{fileNum}.csv";
 
         while (File.Exists(filePath))
         {
             fileNum++;
-            filePath = $"{basePath}{baseName}_{date}-{fileNum}";
+            filePath = $"{basePath}{baseName}_{date}-{fileNum}.csv";
         }
 
-        using (var writer = new StreamWriter($"{filePath}.csv"))
+        using (var writer = new StreamWriter($"{filePath}"))
         using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
         {
             csv.Context.RegisterClassMap<PathMap>();
             wholeFamily = wholeFamily.OrderBy(_ => _.GenerationNumber).ToList(); // enforce sorting hopefully :,(
             csv.WriteRecords(wholeFamily);
         }
-        Console.WriteLine($"Mutation Pertrub Count: {geneticEvolution.MutatePerturbCount}");
+        Console.WriteLine($"Mutation Perturb Count: {geneticEvolution.MutatePerturbCount}");
         Console.WriteLine($"Mutation Refresh Count: {geneticEvolution.MutateRefreshCount}");
         Console.WriteLine($"File Saved as '{filePath}'");
 
