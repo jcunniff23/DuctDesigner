@@ -1,0 +1,29 @@
+Index: README.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>### DuctDesigner\r\n\r\nThis is a repository focused on abstracting the routing for 2D (and eventually 3D) pathfinding problems on a continuous space.\r\n\r\n#### References and Resources used\r\n- Kochnderfer, M. J., & Wheeler, T. A. (2019). Algorithms for optimization. The Mit Press.\r\n- Leigh, R., Louis, S. J., & Miles, C. (2007, April 1). Using a Genetic Algorithm to Explore A*-like Pathfinding Algorithms. IEEE Xplore. https://doi.org/10.1109/CIG.2007.368081\r\n-\r\n\r\n\r\n#### Folder Structure \r\n`~/GenDesign/assets` Jupyter Notebook location for path analysis, imgaes of plots & where csv data is dumped\r\n\r\n`~/GenDesign/Program.cs` Entry point method for running GA with hyper parameters (Number of turns, generations, population, mutation rate, crossover rate)\r\n\r\n`~/GenDesign/GeneticEvolution.cs` Main class for running GA algorithm\r\n\r\n`~/GenDesign/Utils.cs` supporting class/methods for geometry and point manipulation\r\n\r\n`~/TerminalDesign/` WIP C# project for applying GA to terminal placement\r\n\r\n#### Methodology\r\n\r\n
+===================================================================
+diff --git a/README.md b/README.md
+--- a/README.md	(revision 08d8e617f9b125bbc5e3916682be905a20d51d60)
++++ b/README.md	(date 1739407004489)
+@@ -5,11 +5,18 @@
+ #### References and Resources used
+ - Kochnderfer, M. J., & Wheeler, T. A. (2019). Algorithms for optimization. The Mit Press.
+ - Leigh, R., Louis, S. J., & Miles, C. (2007, April 1). Using a Genetic Algorithm to Explore A*-like Pathfinding Algorithms. IEEE Xplore. https://doi.org/10.1109/CIG.2007.368081
+--
++
++- Ahmed, F., & Deb, K. (2013). Multi-objective optimal path planning using elitist non-dominated sorting genetic algorithms. Soft Computing, 17(7), 1283–1299. https://doi.org/10.1007/s00500-012-0964-8
++
++- 
+ 
++#### Development Branches
++`dev/genetic-solver` development branch for GA
++
++`dev/simulated-annealing` development branch for a simulated annealing approach
+ 
+ #### Folder Structure 
+-`~/GenDesign/assets` Jupyter Notebook location for path analysis, imgaes of plots & where csv data is dumped
++`~/GenDesign/assets` Jupyter Notebook location for path analysis, images of plots & where csv data is dumped
+ 
+ `~/GenDesign/Program.cs` Entry point method for running GA with hyper parameters (Number of turns, generations, population, mutation rate, crossover rate)
+ 
