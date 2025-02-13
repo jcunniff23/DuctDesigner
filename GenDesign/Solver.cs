@@ -18,6 +18,7 @@ public class Solver
     {
         StartNode = startNode;
         EndNode = endNode;
+        _world = new World(xMax, yMax);
         _utils = new Utils();
     }
     
@@ -43,6 +44,8 @@ public class Solver
         var oldNode = path.Nodes[nodeIndex];
         var newNode = new Node(oldNode.X + newX, oldNode.Y + newY, true);
 
+
+        //TODO - only allow for created solutions to be along 0deg, 45deg and 90deg vectors (0deg takeoffs as well)
         path = _path;
         path.Nodes[nodeIndex] = newNode;
         return path;
@@ -57,6 +60,16 @@ public class Solver
     private NodePath Anneal()
     {
         _path = InitialSolution();
+        _temperature = 100;
+        double threshold = 0;
+
+        while (_temperature > threshold) 
+        {
+            // take path solution, determine fitness
+            // iterate on solution, randomly
+
+
+        }
     }
     
 }
