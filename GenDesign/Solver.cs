@@ -54,6 +54,7 @@ public class Solver
     private NodePath InitialSolution()
     {
         NodePath path = new NodePath();
+        return path;
     }
     
     
@@ -70,6 +71,8 @@ public class Solver
 
 
         }
+
+        return _path;
     }
     
 }
