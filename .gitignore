@@ -17,6 +17,10 @@
 [Rr]elease/
 x64/
 [Bb]in/
+bin/
+obj/
+Bin/
+Obj/
 [Oo]bj/
 
 # MSTest test Results
