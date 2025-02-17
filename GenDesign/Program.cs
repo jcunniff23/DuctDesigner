@@ -1,7 +1,21 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Autodesk.Revit.UI;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.Attributes;
 
-Console.WriteLine("Hello, World!");
+namespace GenDesign;
 
-// run solver
+[Transaction(TransactionMode.Manual)]
+public class Main : IExternalCommand
+{
 
-// print or display data somehow
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet)
+    {
+        return Result.Succeeded;
+    }
+
+
+
+
+
+}
+

@@ -29,8 +29,17 @@ public class Utils
         return new List<Vector2>();
     }
 
+    public static bool CheckCollision()
+    {
 
-    
+
+        return false;
+    }
+
+    public static void DrawLine()
+    {
+
+    }
 
     
 }

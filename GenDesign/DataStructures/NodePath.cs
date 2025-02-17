@@ -25,6 +25,20 @@ public class NodePath
         return turns;
     }
 
+    //private List<Node> Get45DegTurns()
+    //{
+    //    int turns = 0;
+    //    for (int i = 2; i < _length; i++)
+    //    {
+    //        double dx1 = Nodes[i - 1].X - Nodes[i - 2].X;
+    //        double dy1 = Nodes[i - 1].Y - Nodes[i - 2].Y;
+    //        double dx2 = Nodes[i].X - Nodes[i - 1].X;
+    //        double dy2 = Nodes[i].Y - Nodes[i - 1].Y;
+
+    //        if (dx1 * dy1 != dx2 * dy2) turns++;
+    //    }
+    //}
+
 
     private double CalculateDistance(Node a, Node b)
     {
