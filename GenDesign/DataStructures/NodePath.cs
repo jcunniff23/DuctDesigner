@@ -3,7 +3,7 @@ namespace GenDesign.DataStructures;
 public class NodePath
 {
     private int _length;
-    public List<Node> Nodes { get; set; }
+    public List<Node> Nodes { get; set; } =  new List<Node>();
 
     public double Length => CalculateLength();
     

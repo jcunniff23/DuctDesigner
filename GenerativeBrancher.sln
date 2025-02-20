@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenDesign", "GenDesign\GenDesign.csproj", "{76970AF1-6BE0-4EF1-B967-0DE9DC411EF1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimAnnealAnalysis", "SimAnnealAnalysis\SimAnnealAnalysis.csproj", "{DB36BCFE-4422-433A-BA77-27468EE1E17A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimAnnealWpf", "SimAnnealWpf\SimAnnealWpf.csproj", "{CCF129C2-6C17-4166-ABA5-9F50BDA2B23E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,13 @@ Global
 		{76970AF1-6BE0-4EF1-B967-0DE9DC411EF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{76970AF1-6BE0-4EF1-B967-0DE9DC411EF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{76970AF1-6BE0-4EF1-B967-0DE9DC411EF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB36BCFE-4422-433A-BA77-27468EE1E17A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB36BCFE-4422-433A-BA77-27468EE1E17A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB36BCFE-4422-433A-BA77-27468EE1E17A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB36BCFE-4422-433A-BA77-27468EE1E17A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCF129C2-6C17-4166-ABA5-9F50BDA2B23E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCF129C2-6C17-4166-ABA5-9F50BDA2B23E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCF129C2-6C17-4166-ABA5-9F50BDA2B23E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCF129C2-6C17-4166-ABA5-9F50BDA2B23E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

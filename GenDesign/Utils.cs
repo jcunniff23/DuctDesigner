@@ -19,13 +19,13 @@ public class Utils
     public static Vector2 GetAngleVector(Node a, Node b, int angle)
     {
         // returns the vector projected off of point b that will satisfy the angle provided
-        // utilizes vector a->b to ensure that feasible directions are provided
+        // utilizes vector a->b to ensure that feasible directions are provided. assuming a->b is 0deg
         return new Vector2();
     }
 
     public static List<Vector2> GetAllPossibleAngles(Node a, Node b) 
     {
-        // returns feasbile 0 deg, 45 deg, and 90 deg turns based on A->B
+        // returns feasible 0 deg, 45 deg, and 90 deg turns based on A->B
         return new List<Vector2>();
     }
 

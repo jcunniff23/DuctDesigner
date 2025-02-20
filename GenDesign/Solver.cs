@@ -10,7 +10,6 @@ public class Solver
 {
     private double _temperature;
     private NodePath _path;
-    //private World _world;
     private Random _random;
     private Utils _utils;
     private double _coolingRate;
@@ -28,6 +27,7 @@ public class Solver
         _coolingRate = coolingRate;
         _startingTemp = startingTemp;
         _tempMin = tempMin;
+        _random = new Random();
 
     }
     
@@ -39,7 +39,7 @@ public class Solver
         return path.Length + (double)path.Turns*2.1;
     }
 
-    private NodePath CreateNeighborSolution(NodePath path, double displaceFactor = 0.02)
+    private NodePath CreateNeighborSolution(NodePath path, double displaceFactor = 0.01)
     {
 
         //ways to change the solution:
@@ -49,8 +49,10 @@ public class Solver
             3. change the angle of waypoint (45deg -> 90deg)
          */
         
+        var nodeIndex = _random.Next(1, path.Nodes.Count-1);
         
-        var nodeIndex = _random.Next(1, path.Nodes.Count);
+        while (path.Nodes[nodeIndex].FixedPosition == true)
+            nodeIndex = _random.Next(1, path.Nodes.Count-1);
         
         var solutionDist = Utils.GetDistance(StartNode, EndNode);
         var perturbDist = solutionDist * displaceFactor; // try between 1% and 5%
@@ -90,11 +92,23 @@ public class Solver
 
         var node1 = _path.Nodes[randomNodeIdx];
         var node2 = _path.Nodes[nextNodeIdx];
-        XYZ midPoint = new XYZ((node1.X + node2.X) / 2, (node1.Y + node2.Y) / 2, (node1.Z + node2.Z) / 2);
-
-        var newNode = NodeFactory.GetNode(midPoint);
-        path.Nodes[newNodeIdx] = newNode;
-
+        Node newNode;
+        
+        // try
+        // {
+        //     XYZ midPoint = new XYZ((node1.X + node2.X) / 2, (node1.Y + node2.Y) / 2, (node1.Z + node2.Z) / 2);
+        //     newNode = NodeFactory.GetNode(midPoint);
+        //
+        // }
+        // catch (FileNotFoundException e)
+        // {
+        //     Console.WriteLine(e);
+        //     newNode = new Node((node1.X + node2.X) / 2, (node1.Y + node2.Y) / 2, (node1.Z + node2.Z) / 2, true);
+        // }
+        
+        newNode = new Node((node1.X + node2.X) / 2, (node1.Y + node2.Y) / 2, (node1.Z + node2.Z) / 2, true);
+        // path.Nodes[newNodeIdx] = newNode;
+        path.Nodes.Insert(newNodeIdx+1, newNode);
         return path;
     }
 
@@ -104,10 +118,10 @@ public class Solver
         NodePath path = new NodePath();
         path.Nodes.Add(StartNode);
         // assume horizontal takeoff --> once placed the takeoff cannot move (tune this later.)
-        path.Nodes.Add(new Node(StartNode.X * 1.1, StartNode.Y, StartNode.Z, true) { FixedPosition = true });
+        path.Nodes.Add(new Node((EndNode.X - StartNode.X)*0.1 + StartNode.X, StartNode.Y, StartNode.Z, true) { FixedPosition = true });
 
         //adding node after take off that is able to be moved
-        path.Nodes.Add(new Node(StartNode.X * 1.25, StartNode.Y, StartNode.Z, true) { FixedPosition = false});
+        path.Nodes.Add(new Node((EndNode.X - StartNode.X)*0.25 + StartNode.X, StartNode.Y, StartNode.Z, true) { FixedPosition = false});
         path.Nodes.Add(EndNode);
         return path;
     }
@@ -117,22 +131,31 @@ public class Solver
     {
         _path = InitialSolution();
         _temperature = _startingTemp;
-        double threshold = 0;
 
         int newNodeThreshold = 8; // after perturbing current path X times, create new node to escape local min.
         NodePath bestPathFound = _path;
         NodePath currentPath = _path;
         NodePath newPath = _path;
-        int attemptsOnCurrentPath = 0;
+        int attemptsOnCurrentCount = 0;
 
-
+        int loopCount = 1;
 
         while (_temperature > _tempMin) 
         {
+            
+            // Console.WriteLine($"Attempt: {loopCount}, Temperature: {_temperature}, Path Length: {_path.Nodes.Count}, AttemptCount: {attemptsOnCurrentCount}");
+            Console.WriteLine($"Attempt: {loopCount}, Path: {string.Join(", ", _path.Nodes.Select(node => node.ToString()))}");
+
+            loopCount++;
             // take path solution, determine fitness
             // iterate on solution, randomly
+            if (attemptsOnCurrentCount >= newNodeThreshold)
+            {
+                attemptsOnCurrentCount = 0;
+                currentPath = AddNodeToSolution();
+            }
+            
             newPath = CreateNeighborSolution(currentPath);
-            attemptsOnCurrentPath++;
             var deltaE = Fitness(newPath) - Fitness(currentPath);
 
 
@@ -142,13 +165,23 @@ public class Solver
             }
             else
             {
-                attemptsOnCurrentPath++;
+                attemptsOnCurrentCount++;
             }
+            
+            
+            
 
             _temperature *= _coolingRate;
         }
 
         return _path;
     }
+
+    public NodePath Run()
+    {
+        return Anneal();
+    }
+ 
+    
     
 }

@@ -8,4 +8,9 @@ public class Node(double x, double y, double z, bool walkable)
 
     public bool Walkable { get; init; } = walkable; // whether there is an obstacle or not
     public bool FixedPosition { get; set; } = false;
+
+    public override string ToString()
+    {
+        return $"({X:F2}, {Y:F2}, {Z:F2})".ToString();
+    }
 }
