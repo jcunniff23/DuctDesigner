@@ -13,6 +13,9 @@ public class Main : IExternalCommand
         return Result.Succeeded;
     }
 
+    // Pick start & end point for duct main drawing/creation
+    // Specify terminals (or autocollect)
+    //
 
 
 
