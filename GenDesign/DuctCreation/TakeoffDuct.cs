@@ -7,16 +7,17 @@ using Autodesk.Revit.DB;
 
 namespace GenDesign.DuctCreation;
 
-    internal class TakeoffDuct
+    public class TakeoffDuct
     {
         //public double 
         public bool StraightRun { get; set; }
-
+        public List<XYZ> MidPoints { get; set; }
+        public XYZ StartPoint { get; set; }
         public TakeoffDuct(XYZ startPoint, XYZ terminalPosition, List<XYZ> midPoints)
         {
-            //create on level position equivalent to terminal XZ
-
-
+            MidPoints = midPoints;
+            StartPoint = startPoint;
+            
 
         }
 

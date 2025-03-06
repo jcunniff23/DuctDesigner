@@ -17,7 +17,7 @@ public class MainDuct
 
 }
 
-internal class DuctSegment
+public class DuctSegment
 {
 
     public XYZ Start;
@@ -25,9 +25,9 @@ internal class DuctSegment
     public Line MainAxis => Line.CreateBound(Start, End);
 
 
-    internal DuctSegment(XYZ start, XYZ end)
+    public DuctSegment(XYZ start, XYZ end)
     {
-        this.start = start;
-        this.end = end;
+        this.Start = start;
+        this.End = end;
     }
 }
